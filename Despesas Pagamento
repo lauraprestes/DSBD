@@ -1,0 +1,45 @@
+case 
+
+#!/bin/bash
+set -x 
+siteDownload="http://portaldatransparencia.gov.br/download-de-dados/despesas"
+
+diaIni=$1
+diaFim=$2
+mes=$3
+ano=$4
+
+dataDir="./dados"
+tmpDir="./tmp"
+
+mkdir -p "$dataDir"
+mkdir -p "$tmpDir"
+
+firstFile=true
+
+for dia in $(seq -f "%02g" "$diaIni" "$diaFim"); do
+  zipFile=$ano$mes$dia.zip
+  echo -n "Baixando arquivo $zipFile ..."
+  wget "$siteDownload/$zipFile" 2> /dev/null
+  echo OK
+
+  echo -n "Descompactando arquivo $zipFile ..."
+  unzip -o "$zipFile" '*Despesas_Pagamento.csv' -d "$tmpDir" > /dev/null
+  echo OK
+
+  echo -n "Removendo arquivo $zipFile ..."
+  rm -f "$zipFile"
+  echo OK
+  
+  csvFile=$(find "$tmpDir" -iname "*Despesas_Pagamento*.csv" | head -n 1)
+
+  if [ "$firstFile" = true ]; then
+    cp "$csvFile" "$dataDir/$ano$mes$diaIni-$diaFim-Despesas_Pagamento.csv"
+    firstFile=false
+  else
+    tail -n +2 "$csvFile" >> "$dataDir/$ano$mes$diaIni-$diaFim-Despesas_Pagamento.csv"
+  fi
+
+done
+
+rm -f $tmpDir/*.csv
